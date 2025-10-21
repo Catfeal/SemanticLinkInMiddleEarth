@@ -83,7 +83,7 @@ class ItemCategory(Enum):
 # CELL ********************
 
 class RacesAndKingdoms(Enum):
-    Hobbit = 'Hobbits'
+    Hobbits = 'Hobbits'
     Isengard = 'Isengard'
     Mordor = 'Mordor'
     GoblinsMistyMountains = 'Misty Mountain Goblins'
@@ -355,6 +355,7 @@ def getRaidingTarget(kingdom):
                     .limit(1)
                 )
             row = df.collect()[0]
+            print(row)
         except:
             print(Exception, _Type, raceorkingdom, isloot)
     return row
@@ -671,20 +672,21 @@ def createParty(members = 5, raceorkingdom = 'Isengard', TaDate = 2900, raidtarg
 
 # CELL ********************
 
-def Army(kingdom = RacesAndKingdoms.Mordor):
+def Army(kingdom = 'Mordor'):
+    kingdom_enum = RacesAndKingdoms[kingdom]
     typeOfParty = 'Army'
     ta_date = randomiser(2900,3000)
 
-    if((kingdom == RacesAndKingdoms.Mordor)
-        or (kingdom == RacesAndKingdoms.Isengard)
-        or (kingdom == RacesAndKingdoms.GoblinsMistyMountains)
+    if((kingdom_enum == RacesAndKingdoms.Mordor)
+        or (kingdom_enum == RacesAndKingdoms.Isengard)
+        or (kingdom_enum == RacesAndKingdoms.GoblinsMistyMountains)
     ):
         target = randomTarget_Evil()
     else:
         target = randomTarget_Good()
     raidsucces = randomSucces()  
     membersamount = randomiser(100,3000)
-    kingdomname = kingdom.name
+    kingdomname = kingdom_enum.name
     """
     filename = CreateFilename(kingdom.name, typeOfParty, target.name, ta_date)
     filename = CreateFilename(
@@ -699,7 +701,7 @@ def Army(kingdom = RacesAndKingdoms.Mordor):
         createParty
         (
             members = membersamount, 
-            raceorkingdom = kingdom.name,
+            raceorkingdom = kingdom_enum.name,
             TaDate = ta_date, 
             raidtarget = target.name,
             raidsucces = raidsucces,
@@ -717,22 +719,22 @@ def Army(kingdom = RacesAndKingdoms.Mordor):
 
 # CELL ********************
 
-def RaidingParty(kingdom = RacesAndKingdoms.Mordor):
+def RaidingParty(kingdom = 'Mordor'):
+    kingdom_enum = RacesAndKingdoms[kingdom]
     typeOfParty = 'Raid'
     ta_date = randomiser(2900,3000)
 
-
-    row_target = getRaidingTarget(kingdom.display_name)
+    row_target = getRaidingTarget(kingdom_enum.display_name)
     target = row_target["Owner"]
     
     placename=row_target["Place"]
 
     membersamount = randomiser(1,1)
 
-    kingdomname = kingdom.display_name
+    kingdomname = kingdom_enum.display_name
 
     raidsucces = randomSucces()    
-    print(f"{kingdom.display_name} is raiding {target} and it is a {raidsucces.name}")
+    print(f"{kingdom_enum.display_name} is raiding {target} and it is a {raidsucces.name}")
     """
     #filename = 'Raiding_' + target + '_members_' + str(membersamount) + '_' + str(ta_date)
     filename = CreateFilename(
@@ -767,18 +769,19 @@ def RaidingParty(kingdom = RacesAndKingdoms.Mordor):
 # CELL ********************
 
 def patrol(kingdom = RacesAndKingdoms.Mordor,patroltarget = 'unknown'):
+    kingdom_enum = RacesAndKingdoms[kingdom]
     typeOfParty = 'Patrol'
     ta_date = randomiser(2900,3000)
     membersamount = randomiser(2,6)
-    kingdomname = kingdom.display_name
-    filename = 'Patrol_' + patroltarget
+    kingdomname = kingdom_enum.display_name
+    #filename = 'Patrol_' + patroltarget
     (   
         createParty
         (
             members = membersamount, 
-            raceorkingdom = kingdom,
+            raceorkingdom = kingdomname,
             TaDate = ta_date, 
-            targettablename = filename,
+            #targettablename = filename,
             partytype=typeOfParty
         )
     ) 
@@ -792,19 +795,20 @@ def patrol(kingdom = RacesAndKingdoms.Mordor,patroltarget = 'unknown'):
 
 # CELL ********************
 
-def garrison(kingdom = RacesAndKingdoms.Mordor, garrison_place = 'fort'):
+def garrison(kingdom = 'Mordor', garrison_place = 'fort'):
+    kingdom_enum = RacesAndKingdoms[kingdom]
     typeOfParty = 'Garrison'
     ta_date = randomiser(2900,3000)
     membersamount = randomiser(10,60)
-    kingdomname = kingdom.display_name
-    filename = kingdomname + '_' + garrison_place
+    kingdomname = kingdom_enum.display_name
+    #filename = kingdomname + '_' + garrison_place
     (   
         createParty
         (
             members = membersamount, 
-            raceorkingdom = kingdom,
+            raceorkingdom = kingdomname,
             TaDate = ta_date, 
-            targettablename = filename,
+            #targettablename = filename,
             partytype=typeOfParty
         )
     ) 
@@ -848,6 +852,17 @@ garrisonplaces = spark.sql("SELECT * FROM LH_MiddleEarth.garrisonplaces")
 
 # CELL ********************
 
+RaidingParty(RacesAndKingdoms.Hobbits.name)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
 for k in RacesAndKingdoms:
     print(f"now doing {k.display_name}")
     totalraids = randomiser(1,1)
@@ -861,5 +876,7 @@ for k in RacesAndKingdoms:
 
 # META {
 # META   "language": "python",
-# META   "language_group": "synapse_pyspark"
+# META   "language_group": "synapse_pyspark",
+# META   "frozen": true,
+# META   "editable": false
 # META }
