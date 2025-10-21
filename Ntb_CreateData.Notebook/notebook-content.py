@@ -105,7 +105,7 @@ class RacesAndKingdoms(Enum):
 # CELL ********************
 
 class itemDistribution(Enum):
-    Hobbit = (1, 2, 5, 3, 4, 1)
+    Hobbits = (1, 2, 5, 3, 4, 1)
     Isengard =(3, 3, 2, 1, 1, 1)
     Mordor = (3, 2, 1, 0, 1, 1)
     GoblinsMistyMountains = (2, 1, 1, 3, 1, 1)
@@ -246,7 +246,7 @@ def randomitemvalue(raritylevel='Common'):
 # CELL ********************
 
 def getName(raceorkingdom = 'Isengard'):
-    enum_value = RacesAndKingdoms[kingdom]
+    enum_value = RacesAndKingdoms[raceorkingdom]
     chosenRaceorKingdom = enum_value.display_name
     name = None
     counter = 0
@@ -309,8 +309,9 @@ def getLoot(target):
 # CELL ********************
 
 def getItem(_Type = ItemCategory.Weapons, raceorkingdom = 'Isengard'):
+    kingdom_enum = RacesAndKingdoms[raceorkingdom]
     item_Cat = _Type.display_name
-    chosenRaceorKingdom = raceorkingdom.display_name    
+    chosenRaceorKingdom = kingdom_enum.display_name    
     df = []
     row = None
     rarity = None
@@ -562,7 +563,7 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
         elvenrealm = random.choice(elvenrealms)
         return elvenrealm + '_' + typeOfParty + '_' + placename
 
-    elif kingdom_enum == RacesAndKingdoms.Hobbit:
+    elif kingdom_enum == RacesAndKingdoms.Hobbits:
         randomgetal = randomiser()
         if(randomgetal<=98):
             return placename
@@ -587,7 +588,8 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
 
 def createParty(members = 5, raceorkingdom = 'Isengard', TaDate = 2900, raidtarget = ''
         , raidsucces = '',  placename='', partytype='Garrison'):  
-    RaceOrKingdomname = raceorkingdom.name
+    kingdom_enum = RacesAndKingdoms[raceorkingdom]
+    RaceOrKingdomname = kingdom_enum.name
     item = itemDistribution[RaceOrKingdomname]
     itemlist = []
 
@@ -608,31 +610,31 @@ def createParty(members = 5, raceorkingdom = 'Isengard', TaDate = 2900, raidtarg
     for n in partymembers:
         currentpartymemberid = currentpartymemberid +1
         itemlist=[]
-        partymembername = getName(raceorkingdom)
+        partymembername = getName(RaceOrKingdomname)
 
         # Weapons
         for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.Weapons, raceorkingdom))
+            itemlist.append(getItem(ItemCategory.Weapons, RaceOrKingdomname))
         print('weapons done (' + str(n) + '/' + str(members))
         
         # Armour
         for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.Armour, raceorkingdom))
+            itemlist.append(getItem(ItemCategory.Armour, RaceOrKingdomname))
         print('Armour done (' + str(n) + '/' + str(members))
 
         # food and drinks
         for num in range(0,item.foodanddrinks):
-            itemlist.append(getItem(ItemCategory.FoodAndDrinks, raceorkingdom))        
+            itemlist.append(getItem(ItemCategory.FoodAndDrinks, RaceOrKingdomname))        
         print('food and drinks done (' + str(n) + '/' + str(members))
 
         # Jewelry
         for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.Jewelry, raceorkingdom))
+            itemlist.append(getItem(ItemCategory.Jewelry, RaceOrKingdomname))
         print('Jewelry done (' + str(n) + '/' + str(members))
 
         # RelicsAndHeirlooms
         for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.RelicsAndHeirlooms, raceorkingdom))
+            itemlist.append(getItem(ItemCategory.RelicsAndHeirlooms, RaceOrKingdomname))
         print('RelicsAndHeirlooms done (' + str(n) + '/' + str(members))
 
         if(raidtarget != '' and raidsucces != ''):
