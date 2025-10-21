@@ -447,13 +447,6 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
         sparkdf = sparkdf.withColumn('PartyType', F.lit(partytype))
         
         sparkdf.write.format("delta").option("mergeSchema", "true").mode("append").save(f"{lh_abfs_path}/Tables/{targettablename}")
-        try:
-            # Attempt to create or replace the table
-            sql_query = f"CREATE OR REPLACE TABLE {targettablename} USING DELTA LOCATION '{lh_abfs_path}/Tables/{targettablename}'"
-            print(sql_query)
-            spark.sql(sqlQuery=sql_query)
-        except Exception as e:
-            print(f"An error occurred while registering the table: {e}")
 
     except Exception as e:
         print(f"failed to write {partymember}, {TAdate}, {raceorkingdom}, {targettablename}, {Survived} with exception: {e}")
@@ -754,15 +747,15 @@ def RaidingParty(kingdom = RacesAndKingdoms.Mordor):
 
     row_target = getRaidingTarget(kingdom.display_name)
     target = row_target["Owner"]
-    print('raiding: ' + target)
+    
     placename=row_target["Place"]
 
-    membersamount = randomiser(1,3)
+    membersamount = randomiser(5,40)
 
     kingdomname = kingdom.display_name
 
     raidsucces = randomSucces()    
-    print(raidsucces.name)
+    print(f"{kingdom.display_name} is raiding {target} and it is a {raidsucces.name}")
 
     #filename = 'Raiding_' + target + '_members_' + str(membersamount) + '_' + str(ta_date)
     filename = CreateFilename(
@@ -771,7 +764,7 @@ def RaidingParty(kingdom = RacesAndKingdoms.Mordor):
                                 TAdate=ta_date,
                                 typeOfParty=typeOfParty  
                             )
-    print(f"filename is {filename}")
+    print(f"filename is: {filename}")
 
     (   
         createParty
@@ -878,13 +871,18 @@ garrisonplaces = spark.sql("SELECT * FROM LH_MiddleEarth.garrisonplaces")
 
 # CELL ********************
 
-RaidingParty(RacesAndKingdoms.Rohan)
+for k in RacesAndKingdoms:
+    print(f"now doing {k.display_name}")
+    totalraids = randomiser(10,40)
+    for r in range(totalraids):
+        try:
+            RaidingParty(k)
+        except Exception as e:
+            print(e)
 
 # METADATA ********************
 
 # META {
 # META   "language": "python",
-# META   "language_group": "synapse_pyspark",
-# META   "frozen": false,
-# META   "editable": true
+# META   "language_group": "synapse_pyspark"
 # META }
