@@ -401,7 +401,7 @@ def DecideRarity():
 
 def GetLakehouseabfs_path(kingdom = 'Mordor'):
     enum_value = RacesAndKingdoms[kingdom]
-    LH_Name = 'LH_' + kingdom.display_name
+    LH_Name = 'LH_' + enum_value.name
     try:
         notebookutils.lakehouse.create(name = LH_Name)
     except Exception as ex:
@@ -419,15 +419,49 @@ def GetLakehouseabfs_path(kingdom = 'Mordor'):
 
 # CELL ********************
 
-def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename, partytype, partymember_id,
-                    Survived = True, placename = ''):
+def write_overview_to_table(kingdom, partytype, target, ta_date, placename, result):
+    from pyspark.sql import SparkSession
+    from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+    prm_maxnummer = 1
+    try:
+        df = spark.sql("SELECT max(EventID) FROM LH_MiddleEarth.Events LIMIT 1000")
+        prm_maxnummer =df.collect()[0]["max(EventID)"]
+        prm_maxnummer = prm_maxnummer +1
+    except:
+        print('failed to get max number')
+    table = "abfss://0a50491e-5d61-4438-ad2e-a66f93ec6299@onelake.dfs.fabric.microsoft.com/c39886bf-6f06-4e24-9b4f-40f4514d1b51/Tables/Events"
+    data = [(kingdom, partytype, target, ta_date, placename,prm_maxnummer, result)]
+    schema = StructType([
+        StructField("kingdom", StringType(), True),
+        StructField("partytype", StringType(), True),
+        StructField("target", StringType(), True),
+        StructField("ta_date", IntegerType(), True),
+        StructField("placename", StringType(), True),
+        StructField("EventID", IntegerType(), True),
+        StructField("Result", StringType(), True)
+    ])
+    df = spark.createDataFrame(data, schema)
+    df.write.format("delta").option("mergeSchema", "true").mode("append").save(table)
+    return prm_maxnummer
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename, partytype, partymember_id, event_id,
+                    Survived = True, placename = '' ):
     from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType
     from pyspark.sql.functions import regexp_replace
     from pyspark.sql import SparkSession
     spark = SparkSession.builder.getOrCreate()
 
-    enum_value = RacesAndKingdoms[raceorkingdom]
-    lh_abfs_path = GetLakehouseabfs_path(enum_value)
+    prm_kingdom = RacesAndKingdoms[raceorkingdom]
+    lh_abfs_path = GetLakehouseabfs_path(prm_kingdom.name)
     characters_to_remove = r"[,\;\{\}\(\)\n\t=]"
     
     schema = StructType([
@@ -449,6 +483,8 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
         sparkdf = sparkdf.withColumn("Description", regexp_replace("Description", characters_to_remove, ""))
         sparkdf = sparkdf.withColumn('PartyType', F.lit(partytype))
         sparkdf = sparkdf.withColumn('PartyMemberID', F.lit(partymember_id))
+        sparkdf = sparkdf.withColumn('EventID', F.lit(event_id))
+        spark
 
         
         sparkdf.write.format("delta").option("mergeSchema", "true").mode("append").save(f"{lh_abfs_path}/Tables/{targettablename}")
@@ -499,16 +535,16 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
 # CELL ********************
 
 def CreateFilename(kingdom, typeOfParty, placename, TAdate):
-    kingdom_enum = RacesAndKingdoms[kingdom]
+    prm_kingdom = RacesAndKingdoms[kingdom]
 
     # 1 file to have everything neat for the dark lord
-    if kingdom_enum == RacesAndKingdoms.Mordor:
+    if prm_kingdom == RacesAndKingdoms.Mordor:
         return 'Force'
     #seperate file per subject, clearly organised
-    elif kingdom_enum == RacesAndKingdoms.Gondor:
+    elif prm_kingdom == RacesAndKingdoms.Gondor:
         return typeOfParty + '_' + placename
 
-    elif kingdom_enum == RacesAndKingdoms.Rohan:
+    elif prm_kingdom == RacesAndKingdoms.Rohan:
         if(typeOfParty == 'Garrison'):
             return placename
         elif(typeOfParty=='Patrol'):
@@ -519,7 +555,7 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
             return 'GreatArmyOf' + str(TAdate) + 'Against' + placename
 
     #different system based on the origins of the forces
-    elif kingdom_enum == RacesAndKingdoms.Isengard:
+    elif prm_kingdom == RacesAndKingdoms.Isengard:
         alliesList = ['Uruk-hai', 'orcs', 'Dunlendings', 'Wargs']
         ally = random.choice(alliesList)
         if(ally == 'Uruk-hai'):
@@ -531,7 +567,7 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
         if(ally == 'Wargs'):
             return 'Warg'
 
-    elif kingdom_enum == RacesAndKingdoms.Dwarves:
+    elif prm_kingdom == RacesAndKingdoms.Dwarves:
         dwarvenkingdoms = ['Erebor', 'Blue mountains', 'The Iron hills']
         dwarvenkingdom = random.choice(dwarvenkingdoms)
         if(dwarvenkingdom == 'Erebor'):
@@ -542,7 +578,7 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
             return 'Iron' + typeOfParty + str(TAdate) + '_' + placename
         return ''
 
-    elif kingdom_enum == RacesAndKingdoms.GoblinsMistyMountains:
+    elif prm_kingdom == RacesAndKingdoms.GoblinsMistyMountains:
         orc_prefixes = ["gash", "kruk", "mog", "zurg", "thrakh", "ugluk", "snag", "grish"]
         orc_suffixes = ["g", "dur", "mog", "thrak", "snak", "ruk", "zulg", "burz"]
         subject_tags = {
@@ -558,12 +594,12 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
         filename = f"{prefix}-{tag}{suffix}"
         return filename
 
-    elif kingdom_enum == RacesAndKingdoms.Elves:
+    elif prm_kingdom == RacesAndKingdoms.Elves:
         elvenrealms = ['Rivendel', 'Lothlorien', 'Mirkwood', 'Lindon']
         elvenrealm = random.choice(elvenrealms)
         return elvenrealm + '_' + typeOfParty + '_' + placename
 
-    elif kingdom_enum == RacesAndKingdoms.Hobbits:
+    elif prm_kingdom == RacesAndKingdoms.Hobbits:
         randomgetal = randomiser()
         if(randomgetal<=98):
             return placename
@@ -588,75 +624,78 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
 
 def createParty(members = 5, raceorkingdom = 'Isengard', TaDate = 2900, raidtarget = ''
         , raidsucces = '',  placename='', partytype='Garrison'):  
-    kingdom_enum = RacesAndKingdoms[raceorkingdom]
-    RaceOrKingdomname = kingdom_enum.name
-    item = itemDistribution[RaceOrKingdomname]
-    itemlist = []
+    
+    prm_kingdom = RacesAndKingdoms[raceorkingdom]
+    prm_kingdom_name = prm_kingdom.name
+    prm_itemdistributionlist = itemDistribution[prm_kingdom_name]
 
-    filename = CreateFilename(
-                                kingdom=RaceOrKingdomname,
+    result_itemlist = []
+
+    prm_tablename = CreateFilename(
+                                kingdom=prm_kingdom_name,
                                 placename=placename,
                                 TAdate=TaDate,
                                 typeOfParty=partytype  
                             )
 
     partymembers = list(range(1, members+1))
-
-    deathrate = 0
+    prm_death_rate = 0
     if(raidsucces != ''):
-          deathrate =   RaidSuccesRate[raidsucces].death_rate
+          prm_death_rate =   RaidSuccesRate[raidsucces].death_rate
+    prm_event_id = write_overview_to_table(prm_kingdom_name, partytype, raidtarget, TaDate,placename,raidsucces )
     #loop through party members
     currentpartymemberid = 0
     for n in partymembers:
         currentpartymemberid = currentpartymemberid +1
-        itemlist=[]
-        partymembername = getName(RaceOrKingdomname)
+        result_itemlist=[]
+        partymembername = getName(prm_kingdom_name)
 
         # Weapons
-        for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.Weapons, RaceOrKingdomname))
+        for num in range(0,prm_itemdistributionlist.weapons):
+            result_itemlist.append(getItem(ItemCategory.Weapons, prm_kingdom_name))
         print('weapons done (' + str(n) + '/' + str(members))
         
         # Armour
-        for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.Armour, RaceOrKingdomname))
+        for num in range(0,prm_itemdistributionlist.weapons):
+            result_itemlist.append(getItem(ItemCategory.Armour, prm_kingdom_name))
         print('Armour done (' + str(n) + '/' + str(members))
 
         # food and drinks
-        for num in range(0,item.foodanddrinks):
-            itemlist.append(getItem(ItemCategory.FoodAndDrinks, RaceOrKingdomname))        
+        for num in range(0,prm_itemdistributionlist.foodanddrinks):
+            result_itemlist.append(getItem(ItemCategory.FoodAndDrinks, prm_kingdom_name))        
         print('food and drinks done (' + str(n) + '/' + str(members))
 
         # Jewelry
-        for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.Jewelry, RaceOrKingdomname))
+        for num in range(0,prm_itemdistributionlist.weapons):
+            result_itemlist.append(getItem(ItemCategory.Jewelry, prm_kingdom_name))
         print('Jewelry done (' + str(n) + '/' + str(members))
 
         # RelicsAndHeirlooms
-        for num in range(0,item.weapons):
-            itemlist.append(getItem(ItemCategory.RelicsAndHeirlooms, RaceOrKingdomname))
+        for num in range(0,prm_itemdistributionlist.weapons):
+            result_itemlist.append(getItem(ItemCategory.RelicsAndHeirlooms, prm_kingdom_name))
         print('RelicsAndHeirlooms done (' + str(n) + '/' + str(members))
 
         if(raidtarget != '' and raidsucces != ''):
             RaidSuccesRate[raidsucces].loot_items
             numberofloot = RaidSuccesRate[raidsucces].loot_items
             for n in range(numberofloot):
-                itemlist.append(getLoot(raidtarget))
+                result_itemlist.append(getLoot(raidtarget))
         membersurvived = True
-        if(randomiser()<=deathrate):
+        if(randomiser()<=prm_death_rate):
             membersurvived = False
         
         (writeToTable
             (
-                itemlist, 
+                result_itemlist, 
                 partymember=partymembername, 
                 TAdate=TaDate,
-                raceorkingdom=RaceOrKingdomname, 
-                targettablename= filename, 
+                raceorkingdom=prm_kingdom_name, 
+                targettablename= prm_tablename, 
                 partytype = partytype,
                 Survived= membersurvived, 
                 placename=placename,
-                partymember_id=currentpartymemberid
+                partymember_id=currentpartymemberid, 
+                event_id = prm_event_id
             )
         )
     return 
@@ -675,40 +714,29 @@ def createParty(members = 5, raceorkingdom = 'Isengard', TaDate = 2900, raidtarg
 # CELL ********************
 
 def Army(kingdom = 'Mordor'):
-    kingdom_enum = RacesAndKingdoms[kingdom]
-    typeOfParty = 'Army'
-    ta_date = randomiser(2900,3000)
+    prm_kingdom = RacesAndKingdoms[kingdom]
+    prm_partytype = 'Army'
+    prm_ta_date = randomiser(2900,3000)
 
-    if((kingdom_enum == RacesAndKingdoms.Mordor)
-        or (kingdom_enum == RacesAndKingdoms.Isengard)
-        or (kingdom_enum == RacesAndKingdoms.GoblinsMistyMountains)
+    if((prm_kingdom == RacesAndKingdoms.Mordor)
+        or (prm_kingdom == RacesAndKingdoms.Isengard)
+        or (prm_kingdom == RacesAndKingdoms.GoblinsMistyMountains)
     ):
-        target = randomTarget_Evil()
+        prm_target = randomTarget_Evil()
     else:
-        target = randomTarget_Good()
+        prm_target = randomTarget_Good()
     raidsucces = randomSucces()  
     membersamount = randomiser(100,3000)
-    kingdomname = kingdom_enum.name
-    """
-    filename = CreateFilename(kingdom.name, typeOfParty, target.name, ta_date)
-    filename = CreateFilename(
-                                kingdom=kingdomname,
-                                placename=target.display_name,
-                                TAdate=ta_date,
-                                typeOfParty=typeOfParty  
-                            )
-    print(filename)
-    """
+    kingdomname = prm_kingdom.name
     (   
         createParty
         (
             members = membersamount, 
-            raceorkingdom = kingdom_enum.name,
-            TaDate = ta_date, 
-            raidtarget = target.name,
+            raceorkingdom = prm_kingdom.name,
+            TaDate = prm_ta_date, 
+            raidtarget = prm_target.name,
             raidsucces = raidsucces,
-            #targettablename = filename,
-            partytype=typeOfParty
+            partytype=prm_partytype
         )
     )  
 
@@ -722,42 +750,28 @@ def Army(kingdom = 'Mordor'):
 # CELL ********************
 
 def RaidingParty(kingdom = 'Mordor'):
-    kingdom_enum = RacesAndKingdoms[kingdom]
-    typeOfParty = 'Raid'
-    ta_date = randomiser(2900,3000)
+    prm_kingdom = RacesAndKingdoms[kingdom]
+    prm_partytype = 'Raid'
+    prm_ta_date = randomiser(2900,3000)
 
-    row_target = getRaidingTarget(kingdom_enum.display_name)
-    target = row_target["Owner"]
+    row_target = getRaidingTarget(prm_kingdom.name)
+    prm_target = row_target["Owner"]
     
-    placename=row_target["Place"]
+    prm_target_place=row_target["Place"]
+    Prm_membersamount = randomiser(1,1)
+    prm_raidsucces = randomSucces()    
 
-    membersamount = randomiser(1,1)
-
-    kingdomname = kingdom_enum.display_name
-
-    raidsucces = randomSucces()    
-    print(f"{kingdom_enum.display_name} is raiding {target} and it is a {raidsucces.name}")
-    """
-    #filename = 'Raiding_' + target + '_members_' + str(membersamount) + '_' + str(ta_date)
-    filename = CreateFilename(
-                                kingdom=kingdomname,
-                                placename=placename,
-                                TAdate=ta_date,
-                                typeOfParty=typeOfParty  
-                            )
-    print(f"filename is: {filename}")
-    """
+    print(f"{prm_kingdom.display_name} is raiding {prm_target} and it is a {prm_raidsucces.name}")
     (   
         createParty
         (
-            members = membersamount, 
+            members = Prm_membersamount, 
             raceorkingdom = kingdom,
-            TaDate = ta_date, 
-            raidtarget = target,
-            raidsucces =raidsucces.name,
-            #targettablename = filename,
-            placename=placename,
-            partytype=typeOfParty
+            TaDate = prm_ta_date, 
+            raidtarget = prm_target,
+            raidsucces= prm_raidsucces.name,
+            placename=prm_target_place,
+            partytype=prm_partytype
         )
     )   
 
@@ -770,21 +784,23 @@ def RaidingParty(kingdom = 'Mordor'):
 
 # CELL ********************
 
-def patrol(kingdom = RacesAndKingdoms.Mordor,patroltarget = 'unknown'):
-    kingdom_enum = RacesAndKingdoms[kingdom]
-    typeOfParty = 'Patrol'
-    ta_date = randomiser(2900,3000)
-    membersamount = randomiser(2,6)
-    kingdomname = kingdom_enum.display_name
+def patrol(kingdom = 'Mordor',patroltarget = 'unknown'):
+    prm_kingdom = RacesAndKingdoms[kingdom]
+    prm_partytype = 'Patrol'
+    prm_ta_date = randomiser(2900,3000)
+    prm_membersamount = randomiser(2,6)
+    prm_kingdomname = prm_kingdom.display_name
+    print('not finished')
+    return
     #filename = 'Patrol_' + patroltarget
     (   
         createParty
         (
-            members = membersamount, 
-            raceorkingdom = kingdomname,
-            TaDate = ta_date, 
+            members = prm_membersamount, 
+            raceorkingdom = prm_kingdomname,
+            TaDate = prm_ta_date, 
             #targettablename = filename,
-            partytype=typeOfParty
+            partytype=prm_partytype
         )
     ) 
 
@@ -798,20 +814,20 @@ def patrol(kingdom = RacesAndKingdoms.Mordor,patroltarget = 'unknown'):
 # CELL ********************
 
 def garrison(kingdom = 'Mordor', garrison_place = 'fort'):
-    kingdom_enum = RacesAndKingdoms[kingdom]
-    typeOfParty = 'Garrison'
-    ta_date = randomiser(2900,3000)
-    membersamount = randomiser(10,60)
-    kingdomname = kingdom_enum.display_name
+    prm_kingdom = RacesAndKingdoms[kingdom]
+    prm_partytype = 'Garrison'
+    prm_ta_date = randomiser(2900,3000)
+    prm_membersamount = randomiser(10,60)
+    prm_kingdomname = prm_kingdom.display_name
     #filename = kingdomname + '_' + garrison_place
     (   
         createParty
         (
-            members = membersamount, 
-            raceorkingdom = kingdomname,
-            TaDate = ta_date, 
+            members = prm_membersamount, 
+            raceorkingdom = prm_kingdomname,
+            TaDate = prm_ta_date, 
             #targettablename = filename,
-            partytype=typeOfParty
+            partytype=prm_partytype
         )
     ) 
 
@@ -854,7 +870,7 @@ garrisonplaces = spark.sql("SELECT * FROM LH_MiddleEarth.garrisonplaces")
 
 # CELL ********************
 
-RaidingParty(RacesAndKingdoms.Hobbits.name)
+RaidingParty(RacesAndKingdoms.Dwarves.name)
 
 # METADATA ********************
 
