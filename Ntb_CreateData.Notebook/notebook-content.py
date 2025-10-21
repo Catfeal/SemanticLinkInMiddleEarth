@@ -245,8 +245,9 @@ def randomitemvalue(raritylevel='Common'):
 
 # CELL ********************
 
-def getName(raceorkingdom = RacesAndKingdoms.Isengard):
-    chosenRaceorKingdom = raceorkingdom.display_name
+def getName(raceorkingdom = 'Isengard'):
+    enum_value = RacesAndKingdoms[kingdom]
+    chosenRaceorKingdom = enum_value.display_name
     name = None
     counter = 0
     maxamountoftries = 10
@@ -260,7 +261,7 @@ def getName(raceorkingdom = RacesAndKingdoms.Isengard):
                 )
             name = df.collect()[0]
         except:
-            print(Exception, raceorkingdom)
+            print(Exception, enum_value)
     return name["name"]
 
 
@@ -307,7 +308,7 @@ def getLoot(target):
 
 # CELL ********************
 
-def getItem(_Type = ItemCategory.Weapons, raceorkingdom = RacesAndKingdoms.Isengard):
+def getItem(_Type = ItemCategory.Weapons, raceorkingdom = 'Isengard'):
     item_Cat = _Type.display_name
     chosenRaceorKingdom = raceorkingdom.display_name    
     df = []
@@ -396,7 +397,8 @@ def DecideRarity():
 
 # CELL ********************
 
-def GetLakehouseabfs_path(kingdom = RacesAndKingdoms.Mordor):
+def GetLakehouseabfs_path(kingdom = 'Mordor'):
+    enum_value = RacesAndKingdoms[kingdom]
     LH_Name = 'LH_' + kingdom.display_name
     try:
         notebookutils.lakehouse.create(name = LH_Name)
@@ -527,7 +529,7 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
         if(ally == 'Wargs'):
             return 'Warg'
 
-    elif kingdom_enum == RacesAndKingdoms.Dwergen:
+    elif kingdom_enum == RacesAndKingdoms.Dwarves:
         dwarvenkingdoms = ['Erebor', 'Blue mountains', 'The Iron hills']
         dwarvenkingdom = random.choice(dwarvenkingdoms)
         if(dwarvenkingdom == 'Erebor'):
@@ -574,48 +576,6 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
 # META {
 # META   "language": "python",
 # META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-from pyspark.sql.functions import udf
-from pyspark.sql.types import StringType
-import random
-
-orc_prefixes = ["gash", "kruk", "mog", "zurg", "thrakh", "ugluk", "snag", "grish"]
-orc_suffixes = ["g", "dur", "mog", "thrak", "snak", "ruk", "zulg", "burz"]
-
-subject_tags = {
-    "Raid": ["blood", "fire", "skull", "burn"],
-    "Patrol": ["watch", "sneak", "track", "prowl"],
-    "Garrison": ["hold", "gate", "fort", "keep"],
-    "army": ["horde", "legion", "march", "warband"]
-}
-
-def orc_filename(subject):
-    subject = subject.lower()
-    if subject not in subject_tags:
-        subject = "raid"  # fallback if unknown subject
-
-    prefix = random.choice(orc_prefixes)
-    tag = random.choice(subject_tags[subject])
-    suffix = random.choice(orc_suffixes)
-    number = random.randint(1, 9999)
-
-    # Assemble filename like "kruk-bloodthrak-0421.dat"
-    filename = f"{prefix}-{tag}{suffix}-{number:04d}.dat"
-    return filename
-
-# Register UDF
-orc_filename_udf = udf(orc_filename, StringType())
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark",
-# META   "frozen": true,
-# META   "editable": false
 # META }
 
 # MARKDOWN ********************
