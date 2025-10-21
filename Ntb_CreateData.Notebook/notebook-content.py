@@ -250,8 +250,7 @@ def getName(raceorkingdom = RacesAndKingdoms.Isengard):
     name = None
     counter = 0
     maxamountoftries = 10
-    row = None
-    while(row==None) and (counter<maxamountoftries):
+    while(name==None) and (counter<maxamountoftries):
         counter = counter + 1
         try:
             df = (MiddleEarthNames
@@ -274,8 +273,8 @@ def getName(raceorkingdom = RacesAndKingdoms.Isengard):
 
 # CELL ********************
 
-def getLoot(target = RacesAndKingdoms.Isengard, isloot=True):
-    chosenRaceorKingdom = target.display_name
+def getLoot(target):
+    chosenRaceorKingdom = target
     rarity = DecideRarity()
     df = []
     row = None
@@ -289,12 +288,12 @@ def getLoot(target = RacesAndKingdoms.Isengard, isloot=True):
                     .filter(F.col("Rarity")==rarity)
                     .orderBy(F.rand())
                     .limit(1)
-                    .withColumn("IsLoot", F.lit(isloot))
+                    .withColumn("IsLoot", F.lit(True))
                     
                 )
             #df.withColumn("TradeValue", randomitemvalue(raritylevel))
             row = df.collect()[0]
-        except exception as e:
+        except Exception as e:
             print(e, chosenRaceorKingdom, rarity)
     return row
 
@@ -308,7 +307,7 @@ def getLoot(target = RacesAndKingdoms.Isengard, isloot=True):
 
 # CELL ********************
 
-def getItem(_Type = ItemCategory.Weapons, raceorkingdom = RacesAndKingdoms.Isengard, isloot = False):
+def getItem(_Type = ItemCategory.Weapons, raceorkingdom = RacesAndKingdoms.Isengard):
     item_Cat = _Type.display_name
     chosenRaceorKingdom = raceorkingdom.display_name    
     df = []
@@ -326,12 +325,12 @@ def getItem(_Type = ItemCategory.Weapons, raceorkingdom = RacesAndKingdoms.Iseng
                     .filter(F.col("Rarity")==rarity)
                     .orderBy(F.rand())
                     .limit(1)
-                    .withColumn("IsLoot", F.lit(isloot))
+                    .withColumn("IsLoot", F.lit(False))
                 )
             #df.withColumn("TradeValue", randomitemvalue(raritylevel))
             row = df.collect()[0]
-            print(row)
-        except exception as e:
+            #print(row)
+        except Exception as e:
             print(e, item_Cat, chosenRaceorKingdom, rarity)
     return row
 
@@ -421,6 +420,8 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
                     Survived = True, placename = ''):
     from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType
     from pyspark.sql.functions import regexp_replace
+    from pyspark.sql import SparkSession
+    spark = SparkSession.builder.getOrCreate()
 
     enum_value = RacesAndKingdoms[raceorkingdom]
     lh_abfs_path = GetLakehouseabfs_path(enum_value)
@@ -433,8 +434,7 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
         StructField("Description", StringType(), True),
         StructField("Category", StringType(), True),
         StructField("MiddleEarthGroup", StringType(), True),
-        StructField("IsLoot", BooleanType(), True),
-        StructField("PartyType", StringType(), True)
+        StructField("IsLoot", BooleanType(), True)
     ])
     try:
         sparkdf = spark.createDataFrame(dataframe, schema)
@@ -449,8 +449,10 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
         sparkdf.write.format("delta").option("mergeSchema", "true").mode("append").save(f"{lh_abfs_path}/Tables/{targettablename}")
         try:
             # Attempt to create or replace the table
-            spark.sql(f"CREATE OR REPLACE TABLE {targettablename} USING DELTA LOCATION '{lh_abfs_path}/Tables/{targettablename}'")
-        except AnalysisException as e:
+            sql_query = f"CREATE OR REPLACE TABLE {targettablename} USING DELTA LOCATION '{lh_abfs_path}/Tables/{targettablename}'"
+            print(sql_query)
+            spark.sql(sqlQuery=sql_query)
+        except Exception as e:
             print(f"An error occurred while registering the table: {e}")
 
     except Exception as e:
@@ -509,7 +511,14 @@ def CreateFilename(kingdom, typeOfParty, placename, TAdate):
         return typeOfParty + '_' + placename
 
     elif kingdom_enum == RacesAndKingdoms.Rohan:
-        return ''
+        if(typeOfParty == 'Garrison'):
+            return placename
+        elif(typeOfParty=='Patrol'):
+            return placename
+        elif(typeOfParty=='Raid'):
+            return 'Raiding' + placename
+        elif(typeOfParty=='Army'):
+            return 'GreatArmyOf' + str(TAdate) + 'Against' + placename
 
     #different system based on the origins of the forces
     elif kingdom_enum == RacesAndKingdoms.Isengard:
@@ -666,7 +675,7 @@ def createParty(members = 5, raceorkingdom = RacesAndKingdoms.Isengard, TaDate =
             RaidSuccesRate[raidsucces].loot_items
             numberofloot = RaidSuccesRate[raidsucces].loot_items
             for n in range(numberofloot):
-                itemlist.append(getLoot(RacesAndKingdoms[raidtarget]))
+                itemlist.append(getLoot(raidtarget))
         membersurvived = True
         if(randomiser()<=deathrate):
             membersurvived = False
@@ -747,10 +756,14 @@ def RaidingParty(kingdom = RacesAndKingdoms.Mordor):
     target = row_target["Owner"]
     print('raiding: ' + target)
     placename=row_target["Place"]
+
     membersamount = randomiser(1,3)
+
     kingdomname = kingdom.display_name
-    raidsucces = randomSucces()
+
+    raidsucces = randomSucces()    
     print(raidsucces.name)
+
     #filename = 'Raiding_' + target + '_members_' + str(membersamount) + '_' + str(ta_date)
     filename = CreateFilename(
                                 kingdom=kingdomname,
@@ -758,7 +771,7 @@ def RaidingParty(kingdom = RacesAndKingdoms.Mordor):
                                 TAdate=ta_date,
                                 typeOfParty=typeOfParty  
                             )
-    print(filename)
+    print(f"filename is {filename}")
 
     (   
         createParty
@@ -865,7 +878,7 @@ garrisonplaces = spark.sql("SELECT * FROM LH_MiddleEarth.garrisonplaces")
 
 # CELL ********************
 
-RaidingParty(RacesAndKingdoms.Mordor)
+RaidingParty(RacesAndKingdoms.Rohan)
 
 # METADATA ********************
 
