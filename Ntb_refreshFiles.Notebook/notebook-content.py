@@ -173,6 +173,8 @@ def getpath(kingdom):
         return "abfss://0a50491e-5d61-4438-ad2e-a66f93ec6299@onelake.dfs.fabric.microsoft.com/c39886bf-6f06-4e24-9b4f-40f4514d1b51/Files/Gondor_Items_By_Category.csv"
     elif(kingdom=='Hobbits'):
         return "abfss://0a50491e-5d61-4438-ad2e-a66f93ec6299@onelake.dfs.fabric.microsoft.com/c39886bf-6f06-4e24-9b4f-40f4514d1b51/Files/Hobbit_Items_By_Category.csv"
+    elif(kingdom=='Misty Mountain Goblins'):
+        return "abfss://0a50491e-5d61-4438-ad2e-a66f93ec6299@onelake.dfs.fabric.microsoft.com/c39886bf-6f06-4e24-9b4f-40f4514d1b51/Files/MistyMountainGoblins_Items_By_Category.csv"
 
 # METADATA ********************
 
@@ -187,7 +189,7 @@ spark = SparkSession.builder.getOrCreate()
 spark.sql(f"Truncate table LH_MiddleEarth.me_itemslist")
 table = "abfss://0a50491e-5d61-4438-ad2e-a66f93ec6299@onelake.dfs.fabric.microsoft.com/c39886bf-6f06-4e24-9b4f-40f4514d1b51/Tables/me_itemslist"
 
-Kingdoms = ['Dwarves', 'Elves', 'Humans', 'Isengard', 'Mordor', 'Rohan', 'Gondor', 'Hobbits', ]
+Kingdoms = ['Dwarves', 'Elves', 'Humans', 'Isengard', 'Mordor', 'Rohan', 'Gondor', 'Hobbits', 'Misty Mountain Goblins']
 
 for kingdom in Kingdoms:
     csv_path = getpath(kingdom)
