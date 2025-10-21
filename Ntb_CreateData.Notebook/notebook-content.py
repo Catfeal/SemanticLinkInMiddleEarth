@@ -453,7 +453,7 @@ def write_overview_to_table(kingdom, partytype, target, ta_date, placename, resu
 
 # CELL ********************
 
-def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename, partytype, partymember_id, event_id,
+def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename, partytype, partymember_id, event_id,succes,
                     Survived = True, placename = '' ):
     from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType
     from pyspark.sql.functions import regexp_replace
@@ -472,6 +472,7 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
         StructField("Category", StringType(), True),
         StructField("MiddleEarthGroup", StringType(), True),
         StructField("IsLoot", BooleanType(), True)
+
     ])
     try:
         sparkdf = spark.createDataFrame(dataframe, schema)
@@ -484,6 +485,7 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
         sparkdf = sparkdf.withColumn('PartyType', F.lit(partytype))
         sparkdf = sparkdf.withColumn('PartyMemberID', F.lit(partymember_id))
         sparkdf = sparkdf.withColumn('EventID', F.lit(event_id))
+        sparkdf = sparkdf.withColumn('Result', F.lit(succes))
         spark
 
         
@@ -695,7 +697,8 @@ def createParty(members = 5, raceorkingdom = 'Isengard', TaDate = 2900, raidtarg
                 Survived= membersurvived, 
                 placename=placename,
                 partymember_id=currentpartymemberid, 
-                event_id = prm_event_id
+                event_id = prm_event_id,
+                succes= raidsucces
             )
         )
     return 
