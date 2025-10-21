@@ -162,6 +162,24 @@ def randomTarget_Evil():
 
 # CELL ********************
 
+def randomTarget_Good():
+    n = randomiser(1,3)
+    if(n == 1):
+        return RacesAndKingdoms.Mordor
+    if(n == 2):
+        return RacesAndKingdoms.Isengard
+    if(n == 3):
+        return RacesAndKingdoms.GoblinsMistyMountains
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
 def randomSucces():    
     n = randomiser(1,7)
     if(n == 1):
@@ -230,7 +248,11 @@ def randomitemvalue(raritylevel='Common'):
 def getName(raceorkingdom = RacesAndKingdoms.Isengard):
     chosenRaceorKingdom = raceorkingdom.display_name
     name = None
-    while(name == None):
+    counter = 0
+    maxamountoftries = 10
+    row = None
+    while(row==None) and (counter<maxamountoftries):
+        counter = counter + 1
         try:
             df = (MiddleEarthNames
                     .filter(F.col("MiddleEarthGroup")==chosenRaceorKingdom)
@@ -257,7 +279,10 @@ def getLoot(target = RacesAndKingdoms.Isengard, isloot=True):
     rarity = DecideRarity()
     df = []
     row = None
-    while(row==None):
+    counter = 0
+    maxamountoftries = 10
+    while(row==None) and (counter<maxamountoftries):
+        counter = counter + 1
         try:
             df = (MiddleEarthItems
                     .filter(F.col("MiddleEarthGroup")==chosenRaceorKingdom)
@@ -267,10 +292,10 @@ def getLoot(target = RacesAndKingdoms.Isengard, isloot=True):
                     .withColumn("IsLoot", F.lit(isloot))
                     
                 )
-            df.withColumn("TradeValue", randomitemvalue(raritylevel))
+            #df.withColumn("TradeValue", randomitemvalue(raritylevel))
             row = df.collect()[0]
-        except:
-            print(Exception, chosenRaceorKingdom, isloot)
+        except exception as e:
+            print(e, chosenRaceorKingdom, rarity)
     return row
 
 
@@ -288,7 +313,11 @@ def getItem(_Type = ItemCategory.Weapons, raceorkingdom = RacesAndKingdoms.Iseng
     chosenRaceorKingdom = raceorkingdom.display_name    
     df = []
     row = None
-    while(row==None):
+    rarity = None
+    counter = 0
+    maxamountoftries = 10
+    while(row==None) and (counter<maxamountoftries):
+        counter = counter + 1
         try:
             rarity = DecideRarity()
             df = (MiddleEarthItems
@@ -299,13 +328,11 @@ def getItem(_Type = ItemCategory.Weapons, raceorkingdom = RacesAndKingdoms.Iseng
                     .limit(1)
                     .withColumn("IsLoot", F.lit(isloot))
                 )
-            print(df)
-            df.withColumn("TradeValue", randomitemvalue(raritylevel))
-            print(df)
+            #df.withColumn("TradeValue", randomitemvalue(raritylevel))
             row = df.collect()[0]
             print(row)
-        except:
-            print(Exception, _Type, raceorkingdom, isloot)
+        except exception as e:
+            print(e, item_Cat, chosenRaceorKingdom, rarity)
     return row
 
 # METADATA ********************
@@ -420,6 +447,11 @@ def writeToTable(dataframe, partymember, TAdate, raceorkingdom, targettablename,
         sparkdf = sparkdf.withColumn('PartyType', F.lit(partytype))
         
         sparkdf.write.format("delta").option("mergeSchema", "true").mode("append").save(f"{lh_abfs_path}/Tables/{targettablename}")
+        try:
+            # Attempt to create or replace the table
+            spark.sql(f"CREATE OR REPLACE TABLE {targettablename} USING DELTA LOCATION '{lh_abfs_path}/Tables/{targettablename}'")
+        except AnalysisException as e:
+            print(f"An error occurred while registering the table: {e}")
 
     except Exception as e:
         print(f"failed to write {partymember}, {TAdate}, {raceorkingdom}, {targettablename}, {Survived} with exception: {e}")
@@ -669,11 +701,19 @@ def createParty(members = 5, raceorkingdom = RacesAndKingdoms.Isengard, TaDate =
 def Army(kingdom = RacesAndKingdoms.Mordor):
     typeOfParty = 'Army'
     ta_date = randomiser(2900,3000)
-    target = randomTarget_Evil()
-    target = RacesAndKingdoms.Isengard
+
+    if((kingdom == RacesAndKingdoms.Mordor)
+        or (kingdom == RacesAndKingdoms.Isengard)
+        or (kingdom == RacesAndKingdoms.GoblinsMistyMountains)
+    ):
+        target = randomTarget_Evil()
+    else:
+        target = randomTarget_Good()
+        
     membersamount = randomiser(100,3000)
     kingdomname = kingdom.display_name
     filename = '_ArmyFighting_' + target.display_name + '_' + str(ta_date)
+    filename = CreateFilename(kingdom.display_name, typeOfParty, target.name, ta_date)
     print(filename)
 
     (   
@@ -825,29 +865,13 @@ garrisonplaces = spark.sql("SELECT * FROM LH_MiddleEarth.garrisonplaces")
 
 # CELL ********************
 
-df = (MiddleEarthItems
-                    .filter(F.col("Category")=="Weapons")
-                    .filter(F.col("MiddleEarthGroup")==RacesAndKingdoms.Mordor)
-                    .filter(F.col("Rarity")=="Rare")
-                    .orderBy(F.rand())
-                    .limit(1)
-                )
-print(df)
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
 RaidingParty(RacesAndKingdoms.Mordor)
 
 # METADATA ********************
 
 # META {
 # META   "language": "python",
-# META   "language_group": "synapse_pyspark"
+# META   "language_group": "synapse_pyspark",
+# META   "frozen": false,
+# META   "editable": true
 # META }
