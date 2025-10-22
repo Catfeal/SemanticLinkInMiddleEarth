@@ -655,27 +655,27 @@ def createParty(members = 5, raceorkingdom = 'Isengard', TaDate = 2900, raidtarg
         # Weapons
         for num in range(0,prm_itemdistributionlist.weapons):
             result_itemlist.append(getItem(ItemCategory.Weapons, prm_kingdom_name))
-        print('weapons done (' + str(n) + '/' + str(members))
+        #print('weapons done (' + str(n) + '/' + str(members))
         
         # Armour
         for num in range(0,prm_itemdistributionlist.weapons):
             result_itemlist.append(getItem(ItemCategory.Armour, prm_kingdom_name))
-        print('Armour done (' + str(n) + '/' + str(members))
+        #print('Armour done (' + str(n) + '/' + str(members))
 
         # food and drinks
         for num in range(0,prm_itemdistributionlist.foodanddrinks):
             result_itemlist.append(getItem(ItemCategory.FoodAndDrinks, prm_kingdom_name))        
-        print('food and drinks done (' + str(n) + '/' + str(members))
+        #print('food and drinks done (' + str(n) + '/' + str(members))
 
         # Jewelry
         for num in range(0,prm_itemdistributionlist.weapons):
             result_itemlist.append(getItem(ItemCategory.Jewelry, prm_kingdom_name))
-        print('Jewelry done (' + str(n) + '/' + str(members))
+        #print('Jewelry done (' + str(n) + '/' + str(members))
 
         # RelicsAndHeirlooms
         for num in range(0,prm_itemdistributionlist.weapons):
             result_itemlist.append(getItem(ItemCategory.RelicsAndHeirlooms, prm_kingdom_name))
-        print('RelicsAndHeirlooms done (' + str(n) + '/' + str(members))
+        #print('RelicsAndHeirlooms done (' + str(n) + '/' + str(members))
 
         if(raidtarget != '' and raidsucces != ''):
             RaidSuccesRate[raidsucces].loot_items
@@ -761,7 +761,7 @@ def RaidingParty(kingdom = 'Mordor'):
     prm_target = row_target["Owner"]
     
     prm_target_place=row_target["Place"]
-    Prm_membersamount = randomiser(1,1)
+    Prm_membersamount = randomiser(5,35)
     prm_raidsucces = randomSucces()    
 
     print(f"{prm_kingdom.display_name} is raiding {prm_target} and it is a {prm_raidsucces.name}")
@@ -873,31 +873,20 @@ garrisonplaces = spark.sql("SELECT * FROM LH_MiddleEarth.garrisonplaces")
 
 # CELL ********************
 
-RaidingParty(RacesAndKingdoms.Dwarves.name)
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
 for k in RacesAndKingdoms:
     print(f"now doing {k.display_name}")
-    totalraids = randomiser(1,1)
+    totalraids = randomiser(15,50)
     for r in range(totalraids):
         try:
-            RaidingParty(k)
+            RaidingParty(k.name)
         except Exception as e:
-            print(e)
+            print(f"{k} failed with exception {e}")
 
 # METADATA ********************
 
 # META {
 # META   "language": "python",
 # META   "language_group": "synapse_pyspark",
-# META   "frozen": true,
-# META   "editable": false
+# META   "frozen": false,
+# META   "editable": true
 # META }
